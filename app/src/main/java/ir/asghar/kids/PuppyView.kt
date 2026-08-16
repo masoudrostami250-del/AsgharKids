@@ -185,7 +185,7 @@ class PuppyView(context: Context) : View(context) {
         )
 
         // دهان متحرک
-        val mouth = (sin(time * 5.0 + x) + 1f) / 2f
+        val mouth = (sin(time * 5f + x) + 1f) / 2f
         paint.color = Color.rgb(100, 35, 45)
 
         c.drawOval(
