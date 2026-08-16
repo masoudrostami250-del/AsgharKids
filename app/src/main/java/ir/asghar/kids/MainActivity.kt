@@ -2,96 +2,171 @@ package ir.asghar.kids
 
 import android.Manifest
 import android.app.Activity
-import android.os.Bundle
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.Typeface
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
 import android.view.Gravity
-import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
+import java.util.Locale
 
-class MainActivity : Activity() {
+class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
-    private lateinit var statusText: TextView
+    private lateinit var status: TextView
+    private lateinit var tts: TextToSpeech
+    private var recognizer: SpeechRecognizer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        tts = TextToSpeech(this, this)
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(40, 40, 40, 40)
             setBackgroundColor(Color.rgb(255, 243, 224))
         }
 
         val title = TextView(this).apply {
-            text = "🐶 اصغر"
-            textSize = 42f
+            text = "🐶 اصغر و بچه‌هاش 🐶"
+            textSize = 26f
             gravity = Gravity.CENTER
-            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.rgb(30, 70, 130))
+            setPadding(10, 25, 10, 15)
         }
 
-        val welcome = TextView(this).apply {
-            text = "سلام! من اصغرم 😄\\nدوست داری با من حرف بزنی؟"
-            textSize = 24f
+        val puppyView = PuppyView(this)
+
+        status = TextView(this).apply {
+            text = "اصغر، پامبول و مانگال منتظرن! 🐶❤️"
+            textSize = 19f
             gravity = Gravity.CENTER
-            setPadding(0, 30, 0, 40)
+            setPadding(10, 15, 10, 15)
         }
 
-        val talkButton = TextView(this).apply {
-            text = "🎙️  با اصغر حرف بزن"
-            textSize = 22f
+        val talk = TextView(this).apply {
+            text = "🎙️  با سه تا دوستت حرف بزن"
+            textSize = 20f
             gravity = Gravity.CENTER
-            setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
-            setBackgroundColor(Color.rgb(255, 152, 0))
-            setPadding(40, 25, 40, 25)
+            setBackgroundColor(Color.rgb(30, 120, 220))
+            setPadding(20, 25, 20, 25)
 
             setOnClickListener {
                 requestMicrophone()
             }
         }
 
-        statusText = TextView(this).apply {
-            text = "اصغر منتظرته! 🐶"
-            textSize = 18f
-            gravity = Gravity.CENTER
-            setPadding(0, 35, 0, 0)
-        }
-
         root.addView(title)
-        root.addView(welcome)
-        root.addView(talkButton)
-        root.addView(statusText)
+        root.addView(
+            puppyView,
+            LinearLayout.LayoutParams(
+                -1,
+                0,
+                1f
+            )
+        )
+        root.addView(status)
+        root.addView(talk)
 
         setContentView(root)
     }
 
-    private fun requestMicrophone() {
-        if (android.os.Build.VERSION.SDK_INT >= 23) {
-            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
+    override fun onInit(result: Int) {
+        if (result == TextToSpeech.SUCCESS) {
+            tts.language = Locale("fa", "IR")
+            tts.setSpeechRate(0.85f)
+        }
+    }
 
-                requestPermissions(
-                    arrayOf(Manifest.permission.RECORD_AUDIO),
-                    100
-                )
-            } else {
-                startListening()
-            }
+    private fun requestMicrophone() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+
+            requestPermissions(
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                100
+            )
         } else {
             startListening()
         }
     }
 
     private fun startListening() {
-        statusText.text = "🎙️ اصغر داره گوش میده..."
-        Toast.makeText(
-            this,
-            "میکروفون آماده است",
-            Toast.LENGTH_SHORT
-        ).show()
+        status.text = "🎙️ اصغر و بچه‌ها دارن گوش میدن..."
+
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            speakFriendship()
+            return
+        }
+
+        recognizer?.destroy()
+
+        recognizer = SpeechRecognizer.createSpeechRecognizer(this)
+
+        recognizer?.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {}
+
+            override fun onBeginningOfSpeech() {
+                status.text = "👂 دارم گوش میدم..."
+            }
+
+            override fun onRmsChanged(rmsdB: Float) {}
+
+            override fun onBufferReceived(buffer: ByteArray?) {}
+
+            override fun onEndOfSpeech() {}
+
+            override fun onError(error: Int) {
+                speakFriendship()
+            }
+
+            override fun onResults(results: Bundle?) {
+                speakFriendship()
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) {}
+
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        }
+
+        recognizer?.startListening(intent)
+    }
+
+    private fun speakFriendship() {
+        val message =
+            "سیلوا و سلنا، من دوستتون دارم. با هم دعوا نکنید. " +
+            "مثل ما با هم دوست باشید. مامانتون رو هم اذیت نکنید. آفرین!"
+
+        status.text = "🐶❤️ اصغر، پامبول و مانگال دارن حرف میزنن..."
+
+        tts.setPitch(1.15f)
+        tts.setSpeechRate(0.85f)
+        tts.speak(
+            message,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "asghar_message"
+        )
+    }
+
+    override fun onDestroy() {
+        recognizer?.destroy()
+        tts.stop()
+        tts.shutdown()
+        super.onDestroy()
     }
 }
