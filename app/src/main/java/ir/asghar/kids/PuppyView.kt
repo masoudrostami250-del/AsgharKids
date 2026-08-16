@@ -339,7 +339,7 @@ class PuppyView(context: Context) : View(context) {
         if (adult) {
             val hand = sin((t * 2f).toDouble()).toFloat() * 18f
 
-            p.save()
+            c.save()
             c.rotate(-20f + hand, x - 75f * s, yy + 30f * s)
             c.drawOval(
                 x - 120f * s,
@@ -348,7 +348,7 @@ class PuppyView(context: Context) : View(context) {
                 yy + 65f * s,
                 p
             )
-            p.restore()
+            c.restore()
         }
 
         // پلاک
